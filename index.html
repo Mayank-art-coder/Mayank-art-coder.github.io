@@ -1,1 +1,128 @@
-<h1>Welcome to my Page</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projectile Motion Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        .container {
+            margin: 20px auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        input, button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+            background: white;
+            border: 1px solid #ccc;
+        }
+        #info {
+            font-size: 16px;
+            color: #333;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Projectile Motion Simulator 🚀</h2>
+        <input type="number" id="velocity" placeholder="Initial Velocity (m/s)" min="1">
+        <input type="number" id="angle" placeholder="Angle (°)" min="1" max="90">
+        <button onclick="startSimulation()">Launch</button>
+        <button onclick="resetSimulation()">Reset</button>
+        <div id="info"></div>
+    </div>
+
+    <canvas id="canvas" width="600" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let animationFrame;
+        
+        function startSimulation() {
+            let v0 = parseFloat(document.getElementById("velocity").value);
+            let angle = parseFloat(document.getElementById("angle").value);
+            if (isNaN(v0) || isNaN(angle) || v0 <= 0 || angle <= 0 || angle > 90) {
+                alert("Please enter valid velocity and angle (1-90°)");
+                return;
+            }
+
+            let theta = (angle * Math.PI) / 180;
+            let g = 9.81;
+            let t = 0;
+            let x = 0, y = 0;
+            let interval = 0.05;
+
+            let maxHeight = (v0 * v0 * Math.sin(theta) * Math.sin(theta)) / (2 * g);
+            let timeOfFlight = (2 * v0 * Math.sin(theta)) / g;
+            let range = (v0 * v0 * Math.sin(2 * theta)) / g;
+
+            document.getElementById("info").innerHTML = `
+                <strong>Flight Time:</strong> ${timeOfFlight.toFixed(2)} s |
+                <strong>Max Height:</strong> ${maxHeight.toFixed(2)} m |
+                <strong>Range:</strong> ${range.toFixed(2)} m
+            `;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let path = [];
+
+            function animate() {
+                x = v0 * Math.cos(theta) * t * 10;
+                y = v0 * Math.sin(theta) * t * 10 - 0.5 * g * t * t * 10;
+
+                if (y < 0) {
+                    cancelAnimationFrame(animationFrame);
+                    return;
+                }
+
+                path.push({ x, y });
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.moveTo(50, canvas.height - 50);
+
+                path.forEach(point => {
+                    ctx.lineTo(50 + point.x, canvas.height - 50 - point.y);
+                });
+
+                ctx.strokeStyle = "blue";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(50 + x, canvas.height - 50 - y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = "red";
+                ctx.fill();
+
+                t += interval;
+                animationFrame = requestAnimationFrame(animate);
+            }
+
+            animate();
+        }
+
+        function resetSimulation() {
+            cancelAnimationFrame(animationFrame);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById("info").innerHTML = "";
+        }
+    </script>
+
+</body>
+</html>
