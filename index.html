@@ -66,16 +66,17 @@
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+
     let animationFrame;
-    let path = [], t = 0;
-    let crashed = false;
+    let t = 0, crashed = false;
+    let debris = [];
 
     function startSimulation() {
       cancelAnimationFrame(animationFrame);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      path = [];
       t = 0;
       crashed = false;
+      debris = [];
 
       const v0 = parseFloat(document.getElementById("velocity").value);
       const angle = parseFloat(document.getElementById("angle").value);
@@ -106,64 +107,86 @@
       let vy = v0 * Math.sin(theta);
       let px = 50;
       let py = canvas.height - 50;
-      let bounces = 0;
 
       function animate() {
-        if (crashed) return;
+        if (crashed) {
+          drawDebris();
+          animationFrame = requestAnimationFrame(animate);
+          return;
+        }
 
         t += interval;
         px += vx * interval * 10;
         vy -= g * interval;
         py -= vy * interval * 10;
 
-        // Bounce logic
-        if (py >= canvas.height - 50) {
-          if (Math.abs(vy) < 2 || bounces > Math.floor(v0 / 10)) return;
-          vy = -vy * 0.7; // Energy loss
-          py = canvas.height - 50;
-          bounces++;
-        }
-
         // Boundary crash
         if (px >= canvas.width - 30 || px <= 30 || py <= 30) {
           crashed = true;
-          drawExplosion(px, py);
+          generateDebris(px, py);
           return;
         }
 
-        path.push({ x: px, y: py });
-
-        // Draw fire trail
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < path.length; i++) {
-          let p = path[i];
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
-          ctx.fillStyle = `rgba(255, ${150 + Math.random() * 100}, 0, ${1 - i / path.length})`;
-          ctx.fill();
+        // Ground bounce removed for realism
+        if (py >= canvas.height - 50) {
+          crashed = true;
+          generateDebris(px, py);
+          return;
         }
 
-        // Draw rocket
-        ctx.font = "22px Arial";
-        ctx.fillText("🚀", px - 100, py);
+        // Draw scene
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Rocket
+        ctx.font = "28px Arial";
+        ctx.fillText("🚀", px - 12, py);
+
+        // Fire under rocket
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px - 5 + Math.random() * 10, py + 20 + Math.random() * 10);
+        ctx.lineTo(px + 5 - Math.random() * 10, py + 20 + Math.random() * 10);
+        ctx.closePath();
+        ctx.fillStyle = "orange";
+        ctx.fill();
+        ctx.fillStyle = "red";
+        ctx.fill();
+        ctx.stroke();
+        
         animationFrame = requestAnimationFrame(animate);
       }
 
       animate();
     }
 
-    function drawExplosion(x, y) {
-      ctx.font = "30px Arial";
-      ctx.fillStyle = "red";
-      ctx.fillText("💥", x - 15, y - 15);
+    function generateDebris(x, y) {
+      for (let i = 0; i < 8; i++) {
+        debris.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: -Math.random() * 5,
+          char: Math.random() > 0.5 ? "🪨" : "🚀"
+        });
+      }
+    }
+
+    function drawDebris() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      debris.forEach(d => {
+        d.vy += 0.3;
+        d.x += d.vx;
+        d.y += d.vy;
+        ctx.font = "20px Arial";
+        ctx.fillText(d.char, d.x, d.y);
+      });
     }
 
     function resetSimulation() {
       cancelAnimationFrame(animationFrame);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       document.getElementById("info").innerHTML = "";
-      path = [];
+      debris = [];
       crashed = false;
     }
   </script>
