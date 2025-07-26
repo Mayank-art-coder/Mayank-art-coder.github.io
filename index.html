@@ -1,128 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Projectile Motion Simulator</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f4;
-        }
-        .container {
-            margin: 20px auto;
-            padding: 20px;
-            width: 90%;
-            max-width: 500px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
-        input, button {
-            margin: 10px;
-            padding: 10px;
-            font-size: 16px;
-        }
-        canvas {
-            display: block;
-            margin: 20px auto;
-            background: white;
-            border: 1px solid #ccc;
-        }
-        #info {
-            font-size: 16px;
-            color: #333;
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rocket Motion Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #111;
+      color: white;
+    }
+
+    .container {
+      margin: 20px auto;
+      padding: 20px;
+      width: 90%;
+      max-width: 600px;
+      background: #222;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+
+    input, button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+    }
+
+    canvas {
+      display: block;
+      margin: 20px auto;
+      background: url('https://i.imgur.com/qCeFqqG.jpg') no-repeat center center;
+      background-size: cover;
+      border: 2px solid #444;
+    }
+
+    #info {
+      font-size: 16px;
+      color: #ddd;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h2>🚀 Rocket Motion Simulator in Space</h2>
+    <input type="number" id="velocity" placeholder="Initial Velocity (m/s)" min="1"/>
+    <input type="number" id="angle" placeholder="Angle (°)" min="1" max="90"/>
+    <button onclick="startSimulation()">Launch</button>
+    <button onclick="resetSimulation()">Reset</button>
+    <div id="info"></div>
+  </div>
 
-    <div class="container">
-        <h2>Projectile Motion Simulator 🚀</h2>
-        <input type="number" id="velocity" placeholder="Initial Velocity (m/s)" min="1">
-        <input type="number" id="angle" placeholder="Angle (°)" min="1" max="90">
-        <button onclick="startSimulation()">Launch</button>
-        <button onclick="resetSimulation()">Reset</button>
-        <div id="info"></div>
-    </div>
+  <canvas id="canvas" width="900" height="600"></canvas>
 
-    <canvas id="canvas" width="600" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let animationFrame;
+    let path = [], t = 0;
+    let crashed = false;
 
-    <script>
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        let animationFrame;
-        
-        function startSimulation() {
-            let v0 = parseFloat(document.getElementById("velocity").value);
-            let angle = parseFloat(document.getElementById("angle").value);
-            if (isNaN(v0) || isNaN(angle) || v0 <= 0 || angle <= 0 || angle > 90) {
-                alert("Please enter valid velocity and angle (1-90°)");
-                return;
-            }
+    function startSimulation() {
+      cancelAnimationFrame(animationFrame);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      path = [];
+      t = 0;
+      crashed = false;
 
-            let theta = (angle * Math.PI) / 180;
-            let g = 9.81;
-            let t = 0;
-            let x = 0, y = 0;
-            let interval = 0.05;
+      const v0 = parseFloat(document.getElementById("velocity").value);
+      const angle = parseFloat(document.getElementById("angle").value);
 
-            let maxHeight = (v0 * v0 * Math.sin(theta) * Math.sin(theta)) / (2 * g);
-            let timeOfFlight = (2 * v0 * Math.sin(theta)) / g;
-            let range = (v0 * v0 * Math.sin(2 * theta)) / g;
+      if (isNaN(v0) || isNaN(angle) || v0 <= 0 || angle <= 0 || angle > 90) {
+        alert("Enter valid velocity and angle (1–90°)");
+        return;
+      }
 
-            document.getElementById("info").innerHTML = `
-                <strong>Flight Time:</strong> ${timeOfFlight.toFixed(2)} s |
-                <strong>Max Height:</strong> ${maxHeight.toFixed(2)} m |
-                <strong>Range:</strong> ${range.toFixed(2)} m
-            `;
+      const theta = (angle * Math.PI) / 180;
+      const g = 9.81;
+      const timeOfFlight = (2 * v0 * Math.sin(theta)) / g;
+      const maxHeight = (v0 ** 2 * Math.sin(theta) ** 2) / (2 * g);
+      const range = (v0 ** 2 * Math.sin(2 * theta)) / g;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            let path = [];
+      document.getElementById("info").innerHTML = `
+        <strong>Flight Time:</strong> ${timeOfFlight.toFixed(2)} s |
+        <strong>Max Height:</strong> ${maxHeight.toFixed(2)} m |
+        <strong>Range:</strong> ${range.toFixed(2)} m
+      `;
 
-            function animate() {
-                x = v0 * Math.cos(theta) * t * 10;
-                y = v0 * Math.sin(theta) * t * 10 - 0.5 * g * t * t * 10;
+      simulateRocket(v0, theta, g);
+    }
 
-                if (y < 0) {
-                    cancelAnimationFrame(animationFrame);
-                    return;
-                }
+    function simulateRocket(v0, theta, g) {
+      const interval = 0.05;
+      let vx = v0 * Math.cos(theta);
+      let vy = v0 * Math.sin(theta);
+      let px = 50;
+      let py = canvas.height - 50;
+      let bounces = 0;
 
-                path.push({ x, y });
+      function animate() {
+        if (crashed) return;
 
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.beginPath();
-                ctx.moveTo(50, canvas.height - 50);
+        t += interval;
+        px += vx * interval * 10;
+        vy -= g * interval;
+        py -= vy * interval * 10;
 
-                path.forEach(point => {
-                    ctx.lineTo(50 + point.x, canvas.height - 50 - point.y);
-                });
-
-                ctx.strokeStyle = "blue";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(50 + x, canvas.height - 50 - y, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = "red";
-                ctx.fill();
-
-                t += interval;
-                animationFrame = requestAnimationFrame(animate);
-            }
-
-            animate();
+        // Bounce logic
+        if (py >= canvas.height - 50) {
+          if (Math.abs(vy) < 2 || bounces > Math.floor(v0 / 10)) return;
+          vy = -vy * 0.7; // Energy loss
+          py = canvas.height - 50;
+          bounces++;
         }
 
-        function resetSimulation() {
-            cancelAnimationFrame(animationFrame);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById("info").innerHTML = "";
+        // Boundary crash
+        if (px >= canvas.width - 30 || px <= 30 || py <= 30) {
+          crashed = true;
+          drawExplosion(px, py);
+          return;
         }
-    </script>
 
+        path.push({ x: px, y: py });
+
+        // Draw fire trail
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < path.length; i++) {
+          let p = path[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+          ctx.fillStyle = `rgba(255, ${150 + Math.random() * 100}, 0, ${1 - i / path.length})`;
+          ctx.fill();
+        }
+
+        // Draw rocket
+        ctx.font = "22px Arial";
+        ctx.fillText("🚀", px - 10, py);
+
+        animationFrame = requestAnimationFrame(animate);
+      }
+
+      animate();
+    }
+
+    function drawExplosion(x, y) {
+      ctx.font = "30px Arial";
+      ctx.fillStyle = "red";
+      ctx.fillText("💥", x - 15, y - 15);
+    }
+
+    function resetSimulation() {
+      cancelAnimationFrame(animationFrame);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById("info").innerHTML = "";
+      path = [];
+      crashed = false;
+    }
+  </script>
 </body>
 </html>
